@@ -704,7 +704,7 @@ class FluentExtension extends DataExtension
     {
         $fields = Config::inst()->get($class, 'translate', Config::UNINHERITED);
         $fieldConfig = !empty($fields) && array_key_exists($field, $fields) ? $fields[$field] : null;
-        return $fieldConfig && is_array($fieldConfig) && $fieldConfig['inherit'] === false;
+        return $fieldConfig && is_array($fieldConfig) && isset($fieldConfig['inherit']) && $fieldConfig['inherit'] === false;
     }
 
     // </editor-fold>
