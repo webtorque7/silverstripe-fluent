@@ -67,19 +67,19 @@ class FluentExtension extends DataExtension
                 foreach ($db as $field => $type) {
                     if (!empty($filter)) {
                         // If given an explicit field name filter, then remove non-presented fields
-                    if (!in_array($field, $filter)) {
-                        unset($db[$field]);
-                    }
+                        if (!in_array($field, $filter) && !array_key_exists($field, $filter)) {
+                            unset($db[$field]);
+                        }
                     } else {
 
-                    // Without a name filter then check against each filter type
-                    if (($fieldsInclude && !Fluent::any_match($field, $fieldsInclude))
-                        || ($fieldsExclude && Fluent::any_match($field, $fieldsExclude))
-                        || ($dataInclude && !Fluent::any_match($type, $dataInclude))
-                        || ($dataExclude && Fluent::any_match($type, $dataExclude))
-                    ) {
-                        unset($db[$field]);
-                    }
+                        // Without a name filter then check against each filter type
+                        if (($fieldsInclude && !Fluent::any_match($field, $fieldsInclude))
+                            || ($fieldsExclude && Fluent::any_match($field, $fieldsExclude))
+                            || ($dataInclude && !Fluent::any_match($type, $dataInclude))
+                            || ($dataExclude && Fluent::any_match($type, $dataExclude))
+                        ) {
+                            unset($db[$field]);
+                        }
                     }
                 }
             }
@@ -229,12 +229,11 @@ class FluentExtension extends DataExtension
             foreach ($baseFields as $field => $type) {
                 foreach (Fluent::locales() as $locale) {
                     // Transform has_one relations into basic int fields to prevent interference with ORM
-                if ($type === 'ForeignKey') {
-                    $type = 'Int';
-                }
+                    if ($type === 'ForeignKey') {
+                        $type = 'Int';
+                    }
                     $translatedName = Fluent::db_field_for_locale($field, $locale);
-                    $db[$translatedName] = $type;
-                    ;
+                    $db[$translatedName] = $type;;
                 }
             }
         }
@@ -247,36 +246,36 @@ class FluentExtension extends DataExtension
                 if ($baseSpec === 1 || $baseSpec === true) {
                     if (isset($baseFields[$baseIndex])) {
                         // Single field is translated, so add multiple indexes for each locale
-                    foreach (Fluent::locales() as $locale) {
-                        // Transform has_one relations into basic int fields to prevent interference with ORM
-                        $translatedName = Fluent::db_field_for_locale($baseIndex, $locale);
-                        $indexes[$translatedName] = $baseSpec;
-                    }
+                        foreach (Fluent::locales() as $locale) {
+                            // Transform has_one relations into basic int fields to prevent interference with ORM
+                            $translatedName = Fluent::db_field_for_locale($baseIndex, $locale);
+                            $indexes[$translatedName] = $baseSpec;
+                        }
                     }
                 } else {
                     // Check format of spec
-                $baseSpec = self::parse_index_spec($baseIndex, $baseSpec);
+                    $baseSpec = self::parse_index_spec($baseIndex, $baseSpec);
 
-                // Check if columns overlap with translated
-                $columns = self::explode_column_string($baseSpec['value']);
+                    // Check if columns overlap with translated
+                    $columns = self::explode_column_string($baseSpec['value']);
                     $translatedColumns = array_intersect(array_keys($baseFields), $columns);
                     if ($translatedColumns) {
                         // Generate locale specific version of this index
-                    foreach (Fluent::locales() as $locale) {
-                        $newColumns = array();
-                        foreach ($columns as $column) {
-                            $newColumns[] = isset($baseFields[$column])
-                                ? Fluent::db_field_for_locale($column, $locale)
-                                : $column;
-                        }
+                        foreach (Fluent::locales() as $locale) {
+                            $newColumns = array();
+                            foreach ($columns as $column) {
+                                $newColumns[] = isset($baseFields[$column])
+                                    ? Fluent::db_field_for_locale($column, $locale)
+                                    : $column;
+                            }
 
-                        // Inject new columns and save
-                        $newSpec = array_merge($baseSpec, array(
-                            'name' => Fluent::db_field_for_locale($baseIndex, $locale),
-                            'value' => self::implode_column_list($newColumns)
-                        ));
-                        $indexes[$newSpec['name']] = $newSpec;
-                    }
+                            // Inject new columns and save
+                            $newSpec = array_merge($baseSpec, array(
+                                'name' => Fluent::db_field_for_locale($baseIndex, $locale),
+                                'value' => self::implode_column_list($newColumns)
+                            ));
+                            $indexes[$newSpec['name']] = $newSpec;
+                        }
                     }
                 }
             }
@@ -353,7 +352,7 @@ class FluentExtension extends DataExtension
             $link = DataObject::get($class)->byID($id)->Link();
             // Prefix with domain if in cross-domain mode
             if ($domain = Fluent::domain_for_locale($locale)) {
-                $link = Controller::join_links(Director::protocol().$domain, $link);
+                $link = Controller::join_links(Director::protocol() . $domain, $link);
             }
             return $link;
         });
@@ -466,7 +465,7 @@ class FluentExtension extends DataExtension
                 // If the base (or localised) field has changed, but isn't detected, force a change
                 // Also ensure that if the main field is changed, mark all fields as changed
                 $localeField = Fluent::db_field_for_locale($field, $locale);
-                $localeValue =  $this->owner->$localeField;
+                $localeValue = $this->owner->$localeField;
                 if (($value != $localeValue) || $this->owner->isChanged($field)) {
                     $this->owner->forceChange();
                     return;
@@ -503,7 +502,7 @@ class FluentExtension extends DataExtension
                 $identifier = "\"$table\".\"$column\"";
                 if (stripos($condition, $identifier) !== false) {
                     // Localise column
-                    return "\"$table\".\"".Fluent::db_field_for_locale($column, $locale)."\"";
+                    return "\"$table\".\"" . Fluent::db_field_for_locale($column, $locale) . "\"";
                 }
             }
         }
@@ -525,7 +524,7 @@ class FluentExtension extends DataExtension
                 $columnLocalised = Fluent::db_field_for_locale($column, $locale);
                 $identifier = "\"$table\".\"$column\"";
                 $identifierLocalised = "\"$table\".\"$columnLocalised\"";
-                $condition = preg_replace("/".preg_quote($identifier, '/')."/", $identifierLocalised, $condition);
+                $condition = preg_replace("/" . preg_quote($identifier, '/') . "/", $identifierLocalised, $condition);
             }
         }
         return $condition;
@@ -541,10 +540,15 @@ class FluentExtension extends DataExtension
      */
     protected function localiseSelect($class, $select, $fallback)
     {
-        return "CASE COALESCE(CAST(\"{$class}\".\"{$select}\" AS CHAR), '')
+        if (!$this->canFieldBeEmpty($class, $fallback)) {
+            return "CASE COALESCE(CAST(\"{$class}\".\"{$select}\" AS CHAR), '')
 				WHEN '' THEN \"{$class}\".\"{$fallback}\"
 				WHEN '0' THEN \"{$class}\".\"{$fallback}\"
 				ELSE \"{$class}\".\"{$select}\" END";
+        } else {
+            return "\"{$class}\".\"{$select}\"";
+        }
+
     }
 
     public function augmentSQL(SQLQuery &$query, DataQuery &$dataQuery = null)
@@ -665,7 +669,7 @@ class FluentExtension extends DataExtension
             foreach ($includedTables[$class] as $field) {
 
                 // Skip translated field if not updated in this request
-                if (!isset($updates['fields'][$field])) {
+                if (!array_key_exists($field, $updates['fields'])) {
                     continue;
                 }
 
@@ -681,9 +685,10 @@ class FluentExtension extends DataExtension
                     $defaultField = Fluent::db_field_for_locale($field, $defaultLocale);
 
                     // Note that null may be DB escaped as a string here. @see DBField::prepValueForDB
-                    if (!empty($updates['fields'][$defaultField])
+                    if (
+                    (!empty($updates['fields'][$defaultField])
                         && $updates['fields'][$defaultField] != DB::getConn()->prepStringForDB('')
-                        && strtolower($updates['fields'][$defaultField]) != 'null'
+                        && strtolower($updates['fields'][$defaultField]) != 'null')
                     ) {
                         $updates['fields'][$field] = $updates['fields'][$defaultField];
                     }
@@ -693,6 +698,13 @@ class FluentExtension extends DataExtension
             // Save back modifications to the manipulation
             $manipulation[$class] = $updates;
         }
+    }
+
+    private function canFieldBeEmpty($class, $field)
+    {
+        $fields = Config::inst()->get($class, 'translate', Config::UNINHERITED);
+        $fieldConfig = !empty($fields) && array_key_exists($field, $fields) ? $fields[$field] : null;
+        return $fieldConfig && is_array($fieldConfig) && $fieldConfig['inherit'] === false;
     }
 
     // </editor-fold>
